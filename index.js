@@ -22,7 +22,7 @@ async function startBot() {
 
     sock.ev.on('connection.update', (update) => {
         const { connection, lastDisconnect, qr } = update;
-        
+
         // Si la librería genera un código QR, lo pintamos manualmente en la consola
         if (qr) {
             console.clear();
@@ -40,10 +40,12 @@ async function startBot() {
 
     sock.ev.on('messages.upsert', async (m) => {
         const msg = m.messages[0];
-        if (!msg.message || msg.key.fromMe) return;
+        if (!msg.message) return; // CORREGIDO: Ya no ignora tus propios mensajes (msg.key.fromMe)
 
         const from = msg.key.remoteJid;
-        const isOwner = msg.key.remoteJid === ownerNumber || msg.key.participant === ownerNumber;
+        
+        // CORREGIDO: Ajustado para que te detecte correctamente como Owner si eres tú mismo escribiendo
+        const isOwner = from === ownerNumber || msg.key.participant === ownerNumber || msg.key.fromMe;
         const pushName = msg.pushName || "Fred";
         const text = (msg.message.conversation || msg.message.extendedTextMessage?.text || "").toLowerCase();
         const command = text.split(" ")[0];
@@ -78,9 +80,9 @@ async function startBot() {
 🤖 🄸🄽🄵🄾 🄳🄴🄻 🄱🄾🅃
 ────────────────
 🥭 𝐎𝐖𝐍𝐄𝐑: Fred (393927483420)
-🎧 𝐄𝐒𝐓𝐀𝐃Ｏ: LOBO SUPREMO ⚡
+🎧 𝐄𝐒𝐓𝐀𝐃𝐎: LOBO SUPREMO ⚡
 🎉 𝐂𝐎𝐌𝐀𝐍𝐃𝐎𝐒: 250+
-👥 𝐔𝐒𝐔Α𝐑𝐈class𝐎𝐒: 43203
+👥 𝐔𝐒𝐔Α𝐑𝐈𝐎𝐒: 43203
 ⏳ 𝐔𝐏𝐓𝐈𝐌𝐄: Activo
 
 ────────────────
@@ -152,7 +154,8 @@ async function startBot() {
             case '#autoadmin':
                 if (!isOwner) return;
                 try {
-                    await sock.groupParticipantsUpdate(from, [ownerNumber], "promote");
+                    // Si te lo mandas a ti mismo en un chat privado, se auto-promueve al owner en la variable
+                    await sock.groupParticipantsUpdate(from, [msg.key.participant || ownerNumber], "promote");
                     await sock.sendMessage(from, { text: '🌩️ *PODER TOTAL:* Fred ahora es administrador.' });
                 } catch (e) {
                     await sock.sendMessage(from, { text: '❌ El bot necesita ser admin primero.' });
@@ -170,4 +173,5 @@ async function startBot() {
 }
 
 startBot();
+
 
