@@ -2,6 +2,7 @@ const { default: makeWASocket, useMultiFileAuthState, fetchLatestBaileysVersion,
 const pino = require('pino');
 const moment = require('moment-timezone');
 const axios = require('axios');
+const qrcode = require('qrcode-terminal'); // Librería para pintar el QR manualmente
 
 const db = { users: {} };
 const ownerNumber = "393927483420@s.whatsapp.net";
@@ -10,19 +11,25 @@ async function startBot() {
     const { state, saveCreds } = await useMultiFileAuthState('auth_info');
     const { version } = await fetchLatestBaileysVersion();
 
-    // Configuración limpia para forzar el código QR en la consola de Termux
     const sock = makeWASocket({
         version,
         auth: state,
         logger: pino({ level: 'silent' }),
         browser: ["Fredbot", "Chrome", "110.0.5481.178"], 
-        printQRInTerminal: true, // Esto pintará el código QR en Termux
     });
 
     sock.ev.on('creds.update', saveCreds);
 
     sock.ev.on('connection.update', (update) => {
-        const { connection, lastDisconnect } = update;
+        const { connection, lastDisconnect, qr } = update;
+        
+        // Si la librería genera un código QR, lo pintamos manualmente en la consola
+        if (qr) {
+            console.clear();
+            console.log('✨ ESCANEA ESTE CÓDIGO QR PARA CONECTAR EL FREDBOT:');
+            qrcode.generate(qr, { small: true });
+        }
+
         if (connection === 'close') {
             const shouldReconnect = lastDisconnect.error?.output?.statusCode !== DisconnectReason.loggedOut;
             if (shouldReconnect) startBot();
@@ -54,7 +61,7 @@ async function startBot() {
             case '#menu':
                 const menu = `
 ╔══════════════════════╗
-   🐺  𝐅𝐑𝐄𝐃𝐁𝐎𝐓 - 𝟎𝟑校  🐺
+   🐺  𝐅𝐑𝐄𝐃𝐁𝐎𝐓 - 𝟎𝟑𝟎  🐺
 ╚══════════════════════╝
 
 ʙᴜᴇɴᴀs ᴛᴀʀᴅᴇs 🌤️ *@${pushName}*
@@ -73,7 +80,7 @@ async function startBot() {
 🥭 𝐎𝐖𝐍𝐄𝐑: Fred (393927483420)
 🎧 𝐄𝐒𝐓𝐀𝐃Ｏ: LOBO SUPREMO ⚡
 🎉 𝐂𝐎𝐌𝐀𝐍𝐃𝐎𝐒: 250+
-👥 𝐔𝐒𝐔Α𝐑𝐈𝐎𝐒: 43203
+👥 𝐔𝐒𝐔Α𝐑𝐈class𝐎𝐒: 43203
 ⏳ 𝐔𝐏𝐓𝐈𝐌𝐄: Activo
 
 ────────────────
@@ -163,3 +170,4 @@ async function startBot() {
 }
 
 startBot();
+
